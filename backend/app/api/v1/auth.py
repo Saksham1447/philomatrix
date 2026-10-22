@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, decode_token
@@ -22,9 +23,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/login", response_model=Token)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate user and return access & refresh JWT tokens."""
+    identifier = request.username_or_email.strip()
     user = (
         db.query(User)
-        .filter((User.username == request.username_or_email) | (User.email == request.username_or_email))
+        .filter((User.username == identifier) | (func.lower(User.email) == identifier.lower()))
         .first()
     )
     if not user or not verify_password(request.password, user.password_hash):
